@@ -8,9 +8,7 @@ const chainType = "evm";
 const client = new PullServiceClient(address);
 
 const pairIndexes = [
-  6004,6005,6010,6003,6011,6009,6059,6068,6001,6066,
-  6006,6002,6000,5010,5000,5002,5013,5011,5012,5001,
-  5501,5500,0,1,10,14,5,3,15,16,90,2
+  0,1,10,14,5,3,15,16,90,2
 ];
 
 let latestProof = null;
