@@ -1,8 +1,15 @@
 const express = require("express");
+const cors = require("cors");
 const PullServiceClient = require("./pullServiceClient");
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+// Active CORS pour toutes les origines
+app.use(cors());
+// Autorise aussi les pré-requêtes (OPTIONS) sur toutes les routes
+app.options("*", cors());
+
 const address = "https://rpc-testnet-dora-2.supra.com";
 const chainType = "evm";
 const client = new PullServiceClient(address);
@@ -13,7 +20,7 @@ async function fetchProof(pairIndexes) {
   try {
     const key = pairIndexes.sort((a, b) => a - b).join(",");
     if (cache.has(key)) {
-      return cache.get(key); // preuve en cache
+      return cache.get(key);
     }
 
     const data = await client.getProof({ pair_indexes: pairIndexes, chain_type: chainType });
@@ -31,9 +38,14 @@ app.get("/proof", async (req, res) => {
     const query = req.query.pairs;
     if (!query) return res.status(400).json({ error: "Missing ?pairs=0,1,2" });
 
-    const pairIndexes = query.split(",").map((s) => parseInt(s.trim())).filter(n => !isNaN(n));
+    const pairIndexes = query
+      .split(",")
+      .map((s) => parseInt(s.trim()))
+      .filter((n) => !isNaN(n));
 
-    if (pairIndexes.length === 0) return res.status(400).json({ error: "No valid pair indexes" });
+    if (pairIndexes.length === 0) {
+      return res.status(400).json({ error: "No valid pair indexes" });
+    }
 
     const proof = await fetchProof(pairIndexes);
     res.json({ proof });
@@ -43,4 +55,5 @@ app.get("/proof", async (req, res) => {
 });
 
 app.listen(port, () => console.log(`🚀 Listening on port ${port}`));
+
 
