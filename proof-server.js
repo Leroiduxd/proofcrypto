@@ -7,25 +7,32 @@ const port = process.env.PORT || 3000;
 
 // Active CORS pour toutes les origines
 app.use(cors());
-// Autorise aussi les pré-requêtes (OPTIONS) sur toutes les routes
 app.options("*", cors());
 
 const address = "https://rpc-testnet-dora-2.supra.com";
 const chainType = "evm";
 const client = new PullServiceClient(address);
 
-const cache = new Map(); // cache des preuves par combinaison de paires
+// Cache avec expiration (clé = pairIndexes.join(","), valeur = { proof, timestamp })
+const cache = new Map();
 
 async function fetchProof(pairIndexes) {
   try {
     const key = pairIndexes.sort((a, b) => a - b).join(",");
-    if (cache.has(key)) {
-      return cache.get(key);
+    const cached = cache.get(key);
+    const now = Date.now();
+
+    // ❗ Vérifie si cache existe et s'il a moins de 1000ms
+    if (cached && now - cached.timestamp < 1000) {
+      return cached.proof;
     }
 
     const data = await client.getProof({ pair_indexes: pairIndexes, chain_type: chainType });
     const proof = data.proof_bytes.startsWith("0x") ? data.proof_bytes : "0x" + data.proof_bytes;
-    cache.set(key, proof);
+
+    // Met à jour le cache avec timestamp
+    cache.set(key, { proof, timestamp: now });
+
     return proof;
   } catch (err) {
     console.error("❌ Fetch error:", err?.response?.data || err.message);
@@ -55,5 +62,4 @@ app.get("/proof", async (req, res) => {
 });
 
 app.listen(port, () => console.log(`🚀 Listening on port ${port}`));
-
 
